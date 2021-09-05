@@ -25,10 +25,13 @@ MAIN:
 
 	MOV 20H, #0		;	20H and 21H store the value of second unit, range 0~59
 	MOV 21H, #0		;	so that 20h ~ [0,5] and 21H ~ [0,9]
-	MOV 22H, #0		;	22H, 23H stored the percent of scecond 's value , range 0~99
-	MOV 23H, #0		;	so taht 22H ~ [0,9] and 23H ~ [0,9]
+	MOV 22H, #0		;	22H, 23H stored the percent of second 's value , range 0~99
+	MOV 23H, #0		;	so that 22H ~ [0,9] and 23H ~ [0,9]
 	
 	SETB F0 ; a flag that indicate the program do or dont update the value in memory place
+	; F0 = 1 : do not update value
+	; F0 = 0 : update value
+	; the implement of this flat is in UPDATE_VALUE procedure
 	MOV IE, #10000010B	; allow for timer0 interrupt
 
     CHECKING_LOOP:
@@ -41,7 +44,7 @@ MAIN:
 		
 	START:
 	; if start button is press
-	; it will allow to memory place to update the value by turn of F0 flag
+	; it will allow memory [20H,21H,22H,23H] to be updated the value by turn off F0 flag
 	; then it will will start the timer by setb TF0
 	; and then it will go back and cheking the polling button loop
 		CLR F0
@@ -50,7 +53,7 @@ MAIN:
 	
 	STOP:
 	; if stop button is press
-	; it will allow to memory place to stop update the value by turn on F0 flag
+	; it will allow memory [20H,21H,22H,23H] to stop update the value by turn on F0 flag
 	; and then it will go back and cheking the polling button loop
 		SETB F0
         JMP CHECKING_LOOP
@@ -65,9 +68,9 @@ ISR_TIMER0:
     INC R1
 	CJNE R1, #5, NO_PROBLEM ; if R1 out of range [1,4] , then set it again to 1
 	MOV R1, #1
-	NO_PROBLEM: ; else if R1, still in range of [1,4] , update the new value of time and restart the scanning timer
+	NO_PROBLEM: ; else if R1 still in range of [1,4] , update the new value of time and restart the scanning timer
 	LCALL UPDATE_VALUE
-	MOV TH0, #HIGH(-9216)
+	MOV TH0, #HIGH(-9216) ; 9216 MCs = 9216 * 1.085us ~= 10ms
 	MOV TL0, #LOW(-9216)
 	SETB TR0
 	RETI
@@ -82,8 +85,8 @@ GET_DATA:
 	CLR C
 	SUBB A, R1
 	MOV R0, A
-	MOV A, @R0
-	MOV R0, A
+	MOV A, @R0 ; pointing to [20H or 21H  or ...] memory
+	MOV R0, A  ; R0 stored the value of LED in range [0,9]
 	RET
 	
 DISPLAY_LED:
